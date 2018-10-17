@@ -23,33 +23,20 @@ from thread import *
 
 pid = 0
 tabeladist = []
+tabelaoriginal = []
 MCAST_ADDR = "224.0.0.251"
 MCAST_PORT = 1050
-
-# AF_INET: Specifies the use of (host, port) pair
-# SOCK_DGRAM: Socket type, datagram
-# IPPROTO_UDP: UDP Socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-
-# iinet_aton(): Convert the given address to 32-bit binary format
-group = socket.inet_aton(MCAST_ADDR)
-
-# INADDR_ANY: Bind socket to all local interfaces
-mreq = struct.pack('4sL', group, socket.INADDR_ANY)
-
-# IP_ADD_MEMBERSHIP: join the local multicast group
-sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-
-# SO_REUSEADDR: Allow reuse of local address
-# SO_REUSEPORT: Allow multiple sockets to be bound to same address
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-
-# IP_MULTICAST_LOOP: Loop the message to yourself
-sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
-
-# Binds the socket
-sock.bind(("224.0.0.251", 1050))
+ip0 = "224.0.0.251"
+ip1 = "224.0.1.251"
+ip2 = "224.0.2.251"
+ip3 = "224.0.3.251"
+#sender
+sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+#receiver
+sock0 = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+sock1 = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+sock2 = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+sock3 = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 
 class rtpkt:
     mincost = []
@@ -68,15 +55,23 @@ def sender():
     buffer = str(pid) + "/"
     for i in tabeladist:
         buffer = buffer + str(i.dist) + "/" + str(i.nexthope) + "/"
-    sock.sendto(buffer, ("224.0.0.251", 1050))
+        if(tabelaoriginal[0].dist != 999 and tabelaoriginal[0].dist != 0):
+            sock.sendto(buffer, (ip0, 1050))
+        if(tabelaoriginal[1].dist != 999 and tabelaoriginal[1].dist != 0):
+            sock.sendto(buffer, (ip1, 1050))
+        if(tabelaoriginal[2].dist != 999 and tabelaoriginal[2].dist != 0):
+            sock.sendto(buffer, (ip2, 1050))
+        if(tabelaoriginal[3].dist != 999 and tabelaoriginal[3].dist != 0):
+            sock.sendto(buffer, (ip3, 1050))
 
 
 def receiver():
-    tabledist = []
     while True:
+        tabledist = []
         data = ""
         data = sock.recv(1024)
         rcvtable = data.split("/")
+        print("tcvpid:", rcvtable[0])
         for i in range(0,len(rcvtable)/2):
             tabledist.append(rcvtable[i*2+1])
         if(pid == 0):
@@ -92,44 +87,52 @@ def receiver():
             config.senderflag = 0
 
 def rtinit0():
-    MCAST_ADDR = "224.0.0.251"
-    MCAST_PORT = 1050
     tabeladist.append(rip(0, -1))
     tabeladist.append(rip(1, -1))
     tabeladist.append(rip(3, -1))
     tabeladist.append(rip(7, -1))
+    sock0.bind((ip0, 1050))
+    for i in range(0,4):
+        tabelaoriginal.append(tabeladist[i])
+        
 
 
 def rtinit1():
-    MCAST_ADDR = "224.0.1.251"
-    MCAST_PORT = 1051
     tabeladist.append(rip(1, -1))
     tabeladist.append(rip(0, -1))
     tabeladist.append(rip(1, -1))
     tabeladist.append(rip(999, -1))
+    sock0.bind((ip1, 1050))
+    for i in range(0,4):
+        tabelaoriginal.append(tabeladist[i])
 
 def rtinit2():
-    MCAST_ADDR = "224.0.2.251"
-    MCAST_PORT = 1052
     tabeladist.append(rip(3, -1))
     tabeladist.append(rip(1, -1))
     tabeladist.append(rip(0, -1))
     tabeladist.append(rip(2, -1))
+    sock0.bind((ip2, 1050))
+    for i in range(0,4):
+        tabelaoriginal.append(tabeladist[i])
 
 def rtinit3():
-    MCAST_ADDR = "224.0.3.251"
-    MCAST_PORT = 1053
     tabeladist.append(rip(7, -1))
     tabeladist.append(rip(999, -1))
     tabeladist.append(rip(2, -1))
     tabeladist.append(rip(0, -1))
+    sock0.bind((ip3, 1050))
+    for i in range(0,4):
+        tabelaoriginal.append(tabeladist[i])
 
 def rtupdate0(rcvpkt):
     flag = 0
     for i in range(0,4):
         if(int(rcvpkt.sourceid) != pid and int(rcvpkt.mincost[i])+tabeladist[int(rcvpkt.sourceid)].dist < tabeladist[i].dist):
             tabeladist[i].dist = int(rcvpkt.mincost[i])+tabeladist[int(rcvpkt.sourceid)].dist
-            tabeladist[i].nexthope = int(rcvpkt.sourceid)
+            if(tabeladist[int(rcvpkt.sourceid)].nexthope != -1):
+                tabeladist[i].nexthope = tabeladist[int(rcvpkt.sourceid)].nexthope
+            else:
+                tabeladist[i].nexthope = int(rcvpkt.sourceid)
             print ("Mudou a tabela")
             config.senderflag = 1
             flag = 1
@@ -142,7 +145,10 @@ def rtupdate1(rcvpkt):
     for i in range(0,4):
         if(int(rcvpkt.sourceid) != pid and int(rcvpkt.mincost[i])+tabeladist[int(rcvpkt.sourceid)].dist < tabeladist[i].dist):
             tabeladist[i].dist = int(rcvpkt.mincost[i])+tabeladist[int(rcvpkt.sourceid)].dist
-            tabeladist[i].nexthope = int(rcvpkt.sourceid)
+            if(tabeladist[int(rcvpkt.sourceid)].nexthope != -1):
+                tabeladist[i].nexthope = tabeladist[int(rcvpkt.sourceid)].nexthope
+            else:
+                tabeladist[i].nexthope = int(rcvpkt.sourceid)
             print ("Mudou a tabela")
             config.senderflag = 1
             flag = 1
@@ -155,7 +161,10 @@ def rtupdate2(rcvpkt):
     for i in range(0,4):
         if(int(rcvpkt.sourceid) != pid and int(rcvpkt.mincost[i])+tabeladist[int(rcvpkt.sourceid)].dist < tabeladist[i].dist):
             tabeladist[i].dist = int(rcvpkt.mincost[i])+tabeladist[int(rcvpkt.sourceid)].dist
-            tabeladist[i].nexthope = int(rcvpkt.sourceid)
+            if(tabeladist[int(rcvpkt.sourceid)].nexthope != -1):
+                tabeladist[i].nexthope = tabeladist[int(rcvpkt.sourceid)].nexthope
+            else:
+                tabeladist[i].nexthope = int(rcvpkt.sourceid)
             print ("Mudou a tabela")
             config.senderflag = 1
             flag = 1
@@ -168,7 +177,10 @@ def rtupdate3(rcvpkt):
     for i in range(0,4):
         if(int(rcvpkt.sourceid) != pid and int(rcvpkt.mincost[i])+tabeladist[int(rcvpkt.sourceid)].dist < tabeladist[i].dist):
             tabeladist[i].dist = int(rcvpkt.mincost[i])+tabeladist[int(rcvpkt.sourceid)].dist
-            tabeladist[i].nexthope = int(rcvpkt.sourceid)
+            if(tabeladist[int(rcvpkt.sourceid)].nexthope != -1):
+                tabeladist[i].nexthope = tabeladist[int(rcvpkt.sourceid)].nexthope
+            else:
+                tabeladist[i].nexthope = int(rcvpkt.sourceid)
             print ("Mudou a tabela")
             config.senderflag = 1
             flag = 1
