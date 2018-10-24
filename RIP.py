@@ -27,9 +27,9 @@ tabelaoriginal = []
 MCAST_ADDR = "224.0.0.251"
 MCAST_PORT = 1050
 ip0 = "224.0.0.251"
-ip1 = "224.0.1.251"
-ip2 = "224.0.2.251"
-ip3 = "224.0.3.251"
+ip1 = "224.0.0.251"
+ip2 = "224.0.0.251"
+ip3 = "224.0.0.251"
 #sender
 sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 #receiver
@@ -54,24 +54,33 @@ def sender():
     # multicast the message to the given address
     buffer = str(pid) + "/"
     for i in tabeladist:
-        buffer = buffer + str(i.dist) + "/" + str(i.nexthope) + "/"
-        if(tabelaoriginal[0].dist != 999 and tabelaoriginal[0].dist != 0):
-            sock.sendto(buffer, (ip0, 1050))
-        if(tabelaoriginal[1].dist != 999 and tabelaoriginal[1].dist != 0):
-            sock.sendto(buffer, (ip1, 1050))
-        if(tabelaoriginal[2].dist != 999 and tabelaoriginal[2].dist != 0):
-            sock.sendto(buffer, (ip2, 1050))
-        if(tabelaoriginal[3].dist != 999 and tabelaoriginal[3].dist != 0):
-            sock.sendto(buffer, (ip3, 1050))
+        if(i == tabeladist[-1]):
+            buffer = buffer + str(i.dist) + "/" + str(i.nexthope)
+        else:
+            buffer = buffer + str(i.dist) + "/" + str(i.nexthope) + "/"
+    if(tabelaoriginal[0].dist != 999 and tabelaoriginal[0].dist != 0):
+        sock.sendto(buffer, (ip0, 1051))
+    if(tabelaoriginal[1].dist != 999 and tabelaoriginal[1].dist != 0):
+        sock.sendto(buffer, (ip1, 1052))
+    if(tabelaoriginal[2].dist != 999 and tabelaoriginal[2].dist != 0):
+        sock.sendto(buffer, (ip2, 1053))
+    if(tabelaoriginal[3].dist != 999 and tabelaoriginal[3].dist != 0):
+        sock.sendto(buffer, (ip3, 1054))
 
 
 def receiver():
     while True:
         tabledist = []
         data = ""
-        data = sock.recv(1024)
+        if(pid == 0):
+            data = sock0.recv(1024)
+        if(pid == 1):
+            data = sock1.recv(1024)
+        if(pid == 2):
+            data = sock2.recv(1024)
+        if(pid == 3):
+            data = sock3.recv(1024)
         rcvtable = data.split("/")
-        print("tcvpid:", rcvtable[0])
         for i in range(0,len(rcvtable)/2):
             tabledist.append(rcvtable[i*2+1])
         if(pid == 0):
@@ -91,7 +100,7 @@ def rtinit0():
     tabeladist.append(rip(1, -1))
     tabeladist.append(rip(3, -1))
     tabeladist.append(rip(7, -1))
-    sock0.bind((ip0, 1050))
+    sock0.bind((ip0, 1051))
     for i in range(0,4):
         tabelaoriginal.append(tabeladist[i])
         
@@ -102,7 +111,7 @@ def rtinit1():
     tabeladist.append(rip(0, -1))
     tabeladist.append(rip(1, -1))
     tabeladist.append(rip(999, -1))
-    sock0.bind((ip1, 1050))
+    sock1.bind((ip1, 1052))
     for i in range(0,4):
         tabelaoriginal.append(tabeladist[i])
 
@@ -111,7 +120,7 @@ def rtinit2():
     tabeladist.append(rip(1, -1))
     tabeladist.append(rip(0, -1))
     tabeladist.append(rip(2, -1))
-    sock0.bind((ip2, 1050))
+    sock2.bind((ip2, 1053))
     for i in range(0,4):
         tabelaoriginal.append(tabeladist[i])
 
@@ -120,7 +129,7 @@ def rtinit3():
     tabeladist.append(rip(999, -1))
     tabeladist.append(rip(2, -1))
     tabeladist.append(rip(0, -1))
-    sock0.bind((ip3, 1050))
+    sock3.bind((ip3, 1054))
     for i in range(0,4):
         tabelaoriginal.append(tabeladist[i])
 
@@ -135,10 +144,8 @@ def rtupdate0(rcvpkt):
                 tabeladist[i].nexthope = int(rcvpkt.sourceid)
             print ("Mudou a tabela")
             config.senderflag = 1
-            flag = 1
-    if(flag == 1):
-        for i in range(0,4):
-            print (str(tabeladist[i].dist) + " " + str(tabeladist[i].nexthope))
+            for i in range(0,4):
+                print (str(tabeladist[i].dist) + " " + str(tabeladist[i].nexthope))
 
 def rtupdate1(rcvpkt):
     flag = 0
@@ -151,10 +158,8 @@ def rtupdate1(rcvpkt):
                 tabeladist[i].nexthope = int(rcvpkt.sourceid)
             print ("Mudou a tabela")
             config.senderflag = 1
-            flag = 1
-    if(flag == 1):
-        for i in range(0,4):
-            print (str(tabeladist[i].dist) + " " + str(tabeladist[i].nexthope))
+            for i in range(0,4):
+                print (str(tabeladist[i].dist) + " " + str(tabeladist[i].nexthope))
 
 def rtupdate2(rcvpkt):
     flag = 0
@@ -167,10 +172,8 @@ def rtupdate2(rcvpkt):
                 tabeladist[i].nexthope = int(rcvpkt.sourceid)
             print ("Mudou a tabela")
             config.senderflag = 1
-            flag = 1
-    if(flag == 1):
-        for i in range(0,4):
-            print (str(tabeladist[i].dist) + " " + str(tabeladist[i].nexthope))
+            for i in range(0,4):
+                print (str(tabeladist[i].dist) + " " + str(tabeladist[i].nexthope))
 
 def rtupdate3(rcvpkt):
     flag = 0
@@ -183,10 +186,8 @@ def rtupdate3(rcvpkt):
                 tabeladist[i].nexthope = int(rcvpkt.sourceid)
             print ("Mudou a tabela")
             config.senderflag = 1
-            flag = 1
-    if(flag == 1):
-        for i in range(0,4):
-            print (str(tabeladist[i].dist) + " " + str(tabeladist[i].nexthope))
+            for i in range(0,4):
+                print (str(tabeladist[i].dist) + " " + str(tabeladist[i].nexthope))
 
 if __name__ == '__main__':
     pid = int(sys.argv[1])
@@ -210,9 +211,9 @@ if __name__ == '__main__':
 
     r.start()
     #s.start()
-    opcao = raw_input("Deseja enviar uma mensagem? ")
-    if(int(opcao) == 3):
-        sender()
+    #opcao = raw_input("Deseja enviar uma mensagem? ")
+    time.sleep(7)
+    sender()
     while(True):
         time.sleep(1)
 
